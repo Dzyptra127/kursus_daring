@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Ujian — {{ lesson.judul }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="mb-4">{{ lesson.judul }}</h2>
+    <form action="{% url 'submit' %}" method="POST">
+        {% csrf_token %}
+        {% for p in pertanyaan_list %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>{{ forloop.counter }}. {{ p.teks }}</h5>
+                {% for pil in p.pilihan.all %}
+                <div class="form-check">
+                    <input class="form-check-input" type="radio"
+                           name="pertanyaan_{{ p.id }}"
+                           value="{{ pil.id }}" id="p{{ p.id }}c{{ pil.id }}" required>
+                    <label class="form-check-label" for="p{{ p.id }}c{{ pil.id }}">
+                        {{ pil.teks }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Kirim Jawaban</button>
+    </form>
+</div>
+</body>
+</html>

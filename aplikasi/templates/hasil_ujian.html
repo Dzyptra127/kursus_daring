@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Hasil Ujian</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="card {% if berhasil %}border-success{% else %}border-danger{% endif %}">
+        <div class="card-body text-center">
+            {% if berhasil %}
+            <h2 class="text-success">🎉 Selamat!</h2>
+            {% else %}
+            <h2 class="text-danger">Terima Kasih Telah Mencoba</h2>
+            {% endif %}
+
+            <p class="lead">{{ pesan }}</p>
+            <hr>
+            <h4>Mata Pelajaran: {{ lesson.course.nama }}</h4>
+            <h5>Topik: {{ lesson.judul }}</h5>
+            <h3 class="mt-4">Skor: {{ skor }} / {{ total }}</h3>
+            <p class="display-4">{{ persen }}%</p>
+
+            <a href="{% url 'daftar_kursus' %}" class="btn btn-primary mt-3">Kembali ke Beranda</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,10 +1,11 @@
 from django.urls import path
 from . import views
 
+app_name = 'onlinecourse'
+
 urlpatterns = [
-    path('', views.daftar_kursus, name='daftar_kursus'),
-    path('<int:pk>/', views.detail_kursus, name='detail_kursus'),
-    path('<int:lesson_id>/ujian/', views.ujian, name='ujian'),
-    path('<int:lesson_id>/submit/', views.submit, name='submit'),
-    path('<int:lesson_id>/result/', views.show_exam_result, name='show_exam_result'),
+    path('', views.index, name='index'),
+    path('<int:course_id>/', views.course_details, name='course_details'),
+    path('<int:course_id>/submit/', views.submit, name='submit'),
+    path('<int:course_id>/result/<int:submission_id>/', views.show_exam_result, name='show_exam_result'),
 ]

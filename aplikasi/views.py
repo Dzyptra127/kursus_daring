@@ -1,64 +1,64 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from .models import Course, Lesson, Pertanyaan, Pilihan, Submission
+from django.contrib.auth.models import User
+from .models import Course, Lesson, Question, Choice, Submission
 
 
 def daftar_kursus(request):
-    daftar = Course.objects.all()
-    return render(request, "course_details_bootstrap.html", {"daftar_kursus": daftar})
+    kursus = Course.objects.all()
+    return render(request, 'daftar_kursus.html', {'kursus': kursus})
 
 
-@login_required
-def mulai_ujian(request, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    pertanyaan_list = lesson.daftar_pertanyaan.all()
-    return render(request, "ujian.html", {"lesson": lesson, "pertanyaan_list": pertanyaan_list})
+def detail_kursus(request, pk):
+    kursus = get_object_or_404(Course, pk=pk)
+    pelajaran = kursus.lesson_set.all()
+    return render(request, 'course_details_bootstrap.html', {'course': kursus, 'lessons': pelajaran})
 
 
-@login_required
-def submit(request):
-    if request.method != "POST":
-        return redirect("/")
+def ujian(request, lesson_id):
+    pelajaran = get_object_or_404(Lesson, pk=lesson_id)
+    pertanyaan = pelajaran.question_set.all()
+    return render(request, 'ujian.html', {'lesson': pelajaran, 'questions': pertanyaan})
 
-    skor = 0
-    total = 0
-    lesson_id = None
 
-    for key, value in request.POST.items():
-        if key.startswith("pertanyaan_"):
-            qid = int(key.split("_")[1])
-            choice_id = int(value)
-            pertanyaan = get_object_or_404(Pertanyaan, id=qid)
-            pilihan = get_object_or_404(Pilihan, id=choice_id)
-
-            if not lesson_id:
-                lesson_id = pertanyaan.lesson.id
-
-            benar = pilihan.benar
-            Submission.objects.create(
-                pengguna=request.user,
-                pertanyaan=pertanyaan,
-                pilihan_dipilih=pilihan,
-                benar=benar
+def submit(request, lesson_id):
+    pelajaran = get_object_or_404(Lesson, pk=lesson_id)
+    
+    for pertanyaan in pelajaran.question_set.all():
+        pilihan_terpilih = request.POST.get(f'pertanyaan_{pertanyaan.id}')
+        
+        if pilihan_terpilih:
+            pilihan = get_object_or_404(Choice, pk=pilihan_terpilih)
+            
+            kirim = Submission.objects.create(
+                siswa=request.user,
+                pertanyaan=pertanyaan
             )
-            total += 1
-            if benar:
-                skor += 1
-
-    persen = int((skor / total) * 100) if total > 0 else 0
-    return redirect("show_exam_result", skor=skor, total=total, persen=persen, lesson_id=lesson_id)
+            kirim.pilihan_dipilih.add(pilihan)
+    
+    return redirect('show_exam_result', lesson_id=lesson_id)
 
 
-def show_exam_result(request, skor, total, persen, lesson_id):
-    lesson = get_object_or_404(Lesson, id=lesson_id)
-    berhasil = persen >= 70
-    pesan = "Selamat! Anda berhasil lulus ujian." if berhasil else "Terima kasih telah mencoba, silakan ulangi lagi."
-
-    return render(request, "hasil_ujian.html", {
-        "lesson": lesson,
-        "skor": skor,
-        "total": total,
-        "persen": persen,
-        "berhasil": berhasil,
-        "pesan": pesan
+def show_exam_result(request, lesson_id):
+    pelajaran = get_object_or_404(Lesson, pk=lesson_id)
+    total_soal = pelajaran.question_set.count()
+    benar = 0
+    
+    for pertanyaan in pelajaran.question_set.all():
+        kirim = Submission.objects.filter(
+            siswa=request.user,
+            pertanyaan=pertanyaan
+        ).first()
+        
+        if kirim:
+            pilihan = kirim.pilihan_dipilih.first()
+            if pilihan and pilihan.benar:
+                benar += 1
+    
+    skor = int((benar / total_soal) * 100) if total_soal > 0 else 0
+    
+    return render(request, 'hasil_ujian.html', {
+        'lesson': pelajaran,
+        'skor': skor,
+        'benar': benar,
+        'total': total_soal
     })

@@ -1,13 +1,7 @@
-from django.urls import path
-from . import views
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    path("", views.daftar_kursus, name="daftar_kursus"),
-    path("ujian/<int:lesson_id>/", views.mulai_ujian, name="mulai_ujian"),
-    path("ujian/submit/", views.submit, name="submit"),
-    path(
-        "hasil/<int:skor>/<int:total>/<int:persen>/<int:lesson_id>/",
-        views.show_exam_result,
-        name="show_exam_result"
-    ),
+    path('admin/', admin.site.urls),
+    path('', include('aplikasi.urls')),
 ]

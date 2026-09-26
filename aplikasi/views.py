@@ -1,64 +1,50 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.models import User
-from .models import Course, Lesson, Question, Choice, Submission
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from .models import Course, Enrollment, Question, Choice, Submission
 
 
-def daftar_kursus(request):
-    kursus = Course.objects.all()
-    return render(request, 'daftar_kursus.html', {'kursus': kursus})
+def index(request):
+    courses = Course.objects.all()
+    return render(request, 'onlinecourse/course_list.html', {'courses': courses})
 
 
-def detail_kursus(request, pk):
-    kursus = get_object_or_404(Course, pk=pk)
-    pelajaran = kursus.lesson_set.all()
-    return render(request, 'course_details_bootstrap.html', {'course': kursus, 'lessons': pelajaran})
+def course_details(request, course_id):
+    course = get_object_or_404(Course, pk=course_id)
+    return render(request, 'onlinecourse/course_detail.html', {'course': course})
 
 
-def ujian(request, lesson_id):
-    pelajaran = get_object_or_404(Lesson, pk=lesson_id)
-    pertanyaan = pelajaran.question_set.all()
-    return render(request, 'ujian.html', {'lesson': pelajaran, 'questions': pertanyaan})
-
-
-def submit(request, lesson_id):
-    pelajaran = get_object_or_404(Lesson, pk=lesson_id)
+def submit(request, course_id):
+    course = get_object_or_404(Course, pk=course_id)
+    enrollment, created = Enrollment.objects.get_or_create(learner=request.user.learner, course=course)
     
-    for pertanyaan in pelajaran.question_set.all():
-        pilihan_terpilih = request.POST.get(f'pertanyaan_{pertanyaan.id}')
-        
-        if pilihan_terpilih:
-            pilihan = get_object_or_404(Choice, pk=pilihan_terpilih)
-            
-            kirim = Submission.objects.create(
-                siswa=request.user,
-                pertanyaan=pertanyaan
-            )
-            kirim.pilihan_dipilih.add(pilihan)
+    selected_ids = []
+    for key in request.POST:
+        if key == 'choice':
+            selected_ids.extend(request.POST.getlist(key))
     
-    return redirect('show_exam_result', lesson_id=lesson_id)
+    submission = Submission.objects.create(enrollment=enrollment)
+    submission.choices.set(Choice.objects.filter(id__in=selected_ids))
+    
+    return HttpResponseRedirect(reverse('show_exam_result', args=(course_id, submission.id)))
 
 
-def show_exam_result(request, lesson_id):
-    pelajaran = get_object_or_404(Lesson, pk=lesson_id)
-    total_soal = pelajaran.question_set.count()
-    benar = 0
+def show_exam_result(request, course_id, submission_id):
+    course = get_object_or_404(Course, pk=course_id)
+    submission = get_object_or_404(Submission, pk=submission_id)
+    total_score = 0
+    earned_score = 0
     
-    for pertanyaan in pelajaran.question_set.all():
-        kirim = Submission.objects.filter(
-            siswa=request.user,
-            pertanyaan=pertanyaan
-        ).first()
-        
-        if kirim:
-            pilihan = kirim.pilihan_dipilih.first()
-            if pilihan and pilihan.benar:
-                benar += 1
+    for question in course.question_set.all():
+        selected_ids = list(submission.choices.filter(question=question).values_list('id', flat=True))
+        if question.is_get_score(selected_ids):
+            earned_score += question.grade
+        total_score += question.grade
     
-    skor = int((benar / total_soal) * 100) if total_soal > 0 else 0
+    score_percent = int((earned_score / total_score) * 100) if total_score > 0 else 0
     
-    return render(request, 'hasil_ujian.html', {
-        'lesson': pelajaran,
-        'skor': skor,
-        'benar': benar,
-        'total': total_soal
+    return render(request, 'onlinecourse/exam_result.html', {
+        'course': course,
+        'submission': submission,
+        'grade': score_percent
     })

@@ -23,3 +23,12 @@ class Choice(models.Model):
     benar = models.BooleanField(default=False)
     def __str__(self):
         return self.teks
+
+class Submission(models.Model):
+    siswa = models.ForeignKey("auth.User", on_delete=models.CASCADE)
+    pertanyaan = models.ForeignKey(Question, on_delete=models.CASCADE)
+    pilihan_dipilih = models.ManyToManyField(Choice)
+    tanggal_kirim = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.siswa.username} — {self.pertanyaan.teks[:30]}..."
